@@ -21,8 +21,15 @@ class YacineAPI {
   Future<List<dynamic>?> _request(String endpoint) async {
     try {
       var url = Uri.parse(apiUrl + endpoint);
-      var response = await get(url);
-      return _decrypt(response.body, apiKey + response.headers['t']!);
+      var response = await get(url).timeout(const Duration(seconds: 20));
+      final token = response.headers['t'];
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return [{'error': 'Server request failed (HTTP ${response.statusCode}).'}];
+      }
+      if (token == null || token.isEmpty) {
+        return [{'error': 'The TV service did not return the required response header. The service may be unavailable or changed.'}];
+      }
+      return _decrypt(response.body, apiKey + token);
     } catch (e) {
       return [
         {'error': e.toString()}
